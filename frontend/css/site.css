@@ -1,0 +1,144 @@
+/* ============================================================
+   VeilDrop Public Site — Stage 2 marketing styles
+   Token-driven; no arbitrary values. Loads after pages.css.
+   ============================================================ */
+
+/* ---- Scroll-aware nav ---- */
+.site-nav { transition: background var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease); }
+.site-nav.scrolled { background: var(--surface); box-shadow: var(--shadow-sm); border-bottom-color: transparent; }
+
+/* Keep section headings clear of the sticky nav for anchors + scrollIntoView */
+[id] { scroll-margin-top: calc(var(--topbar-height) + var(--sp-4)); }
+
+/* ---- Mobile nav backdrop ---- */
+.nav-backdrop {
+  position: fixed; inset: 0; z-index: calc(var(--z-nav) - 1);
+  background: rgba(12, 14, 18, 0.5);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-2) var(--ease);
+}
+.nav-backdrop.open { opacity: 1; pointer-events: auto; }
+
+/* ---- Hero cursor glow ---- */
+.hero { --gx: 70%; --gy: 20%; }
+.hero-glow {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(560px 320px at var(--gx) var(--gy), var(--accent-soft), transparent 70%);
+  opacity: 0.6;
+}
+.hero-inner { z-index: 1; }
+@media (pointer: coarse) { .hero-glow { display: none; } }
+
+/* ---- Testimonials carousel ---- */
+.carousel {
+  position: relative; overflow: hidden;
+  background: var(--surface); border: var(--border-width) solid var(--border);
+  border-radius: var(--r-lg);
+}
+.carousel:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; box-shadow: none; }
+.carousel-track { display: flex; transition: transform var(--dur-3) var(--ease); }
+.carousel-slide {
+  flex: 0 0 100%; min-width: 100%;
+  padding: var(--sp-8) var(--sp-10);
+  display: flex; flex-direction: column; gap: var(--sp-4); align-items: flex-start;
+}
+.carousel-quote {
+  margin: 0; font-size: var(--fs-xl); line-height: var(--lh-normal);
+  font-weight: var(--fw-regular); color: var(--text);
+}
+.carousel-meta { display: flex; align-items: center; gap: var(--sp-3); }
+.carousel-avatar {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; flex: none; border-radius: var(--r-full);
+  background: var(--accent-subtle); color: var(--accent);
+}
+.carousel-who { display: flex; flex-direction: column; gap: 2px; }
+.carousel-name { font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--text); }
+.carousel-role { font-size: var(--fs-sm); color: var(--text-muted); }
+.carousel-nav {
+  display: flex; align-items: center; justify-content: center; gap: var(--sp-4);
+  padding: var(--sp-4); border-top: var(--border-width) solid var(--border);
+}
+.carousel-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: var(--r-full);
+  border: var(--border-width) solid var(--border-strong); background: var(--surface);
+  color: var(--text-secondary);
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.carousel-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--text-muted); }
+.carousel-btn[data-carousel-prev] .icon { transform: rotate(180deg); }
+.carousel-dots { display: flex; gap: var(--sp-2); }
+.carousel-dot {
+  width: 10px; height: 10px; border-radius: var(--r-full);
+  background: var(--surface-3); cursor: pointer;
+  transition: background var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
+}
+.carousel-dot:hover { background: var(--text-muted); }
+.carousel-dot[aria-current="true"] { background: var(--accent); transform: scale(1.25); }
+
+/* ---- FAQ category tabs ---- */
+.faq-tabs { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-6); }
+.faq-tab {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4); border-radius: var(--r-full);
+  border: var(--border-width) solid var(--border-strong); background: var(--surface);
+  color: var(--text-secondary); font-size: var(--fs-md); font-weight: var(--fw-medium);
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.faq-tab:hover { border-color: var(--text-muted); color: var(--text); }
+.faq-tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+.faq-tab .count { opacity: 0.75; font-family: var(--font-mono); font-size: var(--fs-xs); }
+.faq-panels { display: block; }
+.faq-panel { display: none; }
+.faq-panel.active { display: block; }
+
+/* ---- Rich footer ---- */
+.site-footer { padding-top: 0; padding-bottom: 0; }
+.footer-grid {
+  display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: var(--sp-8);
+  padding: var(--sp-10) 0 var(--sp-8);
+}
+.footer-col { display: flex; flex-direction: column; gap: var(--sp-1); align-items: flex-start; }
+.footer-brand { gap: var(--sp-3); }
+.footer-blurb { font-size: var(--fs-sm); color: var(--text-secondary); line-height: var(--lh-normal); max-width: 30ch; }
+.footer-title {
+  font-size: var(--fs-xs); font-weight: var(--fw-semibold); letter-spacing: var(--ls-wide);
+  text-transform: uppercase; color: var(--text-muted); margin: 0 0 var(--sp-2);
+}
+.footer-link { font-size: var(--fs-md); color: var(--text-secondary); padding: var(--sp-1) 0; }
+.footer-link:hover { color: var(--text); text-decoration: none; }
+.footer-bottom { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; }
+.footer-tech { font-family: var(--font-mono); }
+.footer-copy { color: var(--text-muted); }
+
+/* ---- About: stats, story, team ---- */
+.team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); }
+.team-card { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); text-align: center; }
+.team-avatar {
+  display: flex; align-items: center; justify-content: center;
+  width: 64px; height: 64px; border-radius: var(--r-full);
+  background: var(--surface-2); color: var(--text-muted); border: var(--border-width) solid var(--border);
+}
+.team-card h3 { font-size: var(--fs-lg); }
+.team-role { font-size: var(--fs-sm); color: var(--text-muted); }
+
+/* ---- Contact polish ---- */
+.contact-form > .btn { align-self: flex-start; }
+
+/* ---- Responsive ---- */
+@media (max-width: 1024px) {
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 900px) {
+  .team-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .carousel-slide { padding: var(--sp-6); }
+  .carousel-quote { font-size: var(--fs-lg); }
+  .carousel-dots { display: none; }
+}
+@media (max-width: 560px) {
+  .footer-grid { grid-template-columns: 1fr; gap: var(--sp-6); }
+  .team-grid { grid-template-columns: 1fr; }
+}

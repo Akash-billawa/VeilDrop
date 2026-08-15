@@ -1,0 +1,170 @@
+/* ============================================================
+   VeilDrop Design Tokens
+   Single source of values — no arbitrary CSS values elsewhere.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* ---- Color: surfaces ---- */
+  --bg: #f6f6f8;
+  --surface: #ffffff;
+  --surface-2: #f1f2f5;
+  --surface-3: #e9eaee;
+  --surface-inverse: #181a1f;
+
+  /* ---- Color: borders ---- */
+  --border: #e3e4e8;
+  --border-strong: #cfd1d7;
+
+  /* ---- Color: text ---- */
+  --text: #1a1b1f;
+  --text-secondary: #565a63;
+  --text-muted: #5f636c;
+  --text-inverse: #f5f6f8;
+
+  /* ---- Color: accent ---- */
+  --accent: #3457d5;
+  --accent-hover: #2b49b8;
+  --accent-active: #233c99;
+  --accent-subtle: #eef1fe;
+  --accent-soft: #dfe6fd;
+  --accent-contrast: #ffffff;
+
+  /* ---- Color: semantic ---- */
+  --success: #16794c;
+  --success-subtle: #e8f6ef;
+  --success-contrast: #ffffff;
+  --warning: #8f4e04;
+  --warning-subtle: #fbf1e2;
+  --danger: #b83245;
+  --danger-hover: #9d2a3b;
+  --danger-contrast: #ffffff;
+  --danger-subtle: #fbecef;
+  --info: #1f54d0;
+  --info-subtle: #eaf1fd;
+
+  /* ---- Color: code ---- */
+  --code-bg: #f1f2f5;
+
+  /* ---- Typography ---- */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+  --fs-3xl: 32px;
+  --fs-display: 44px;
+
+  --lh-tight: 1.2;
+  --lh-snug: 1.35;
+  --lh-normal: 1.55;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  --ls-tight: -0.02em;
+  --ls-normal: 0;
+  --ls-wide: 0.04em;
+
+  /* ---- Spacing (4px scale) ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-14: 56px;
+  --sp-16: 64px;
+
+  /* ---- Radius ---- */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-full: 999px;
+
+  /* ---- Border ---- */
+  --border-width: 1px;
+
+  /* ---- Elevation ---- */
+  --shadow-xs: 0 1px 2px rgba(16, 18, 24, 0.05);
+  --shadow-sm: 0 1px 3px rgba(16, 18, 24, 0.06), 0 1px 2px rgba(16, 18, 24, 0.04);
+  --shadow-md: 0 4px 12px rgba(16, 18, 24, 0.07), 0 2px 4px rgba(16, 18, 24, 0.04);
+  --shadow-lg: 0 12px 32px rgba(16, 18, 24, 0.12), 0 4px 8px rgba(16, 18, 24, 0.06);
+
+  /* ---- Motion ---- */
+  --dur-1: 150ms;
+  --dur-2: 250ms;
+  --dur-3: 400ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ---- Z-index ---- */
+  --z-nav: 30;
+  --z-overlay: 40;
+  --z-dialog: 50;
+  --z-toast: 70;
+  --z-palette: 80;
+
+  /* ---- Component defaults ---- */
+  --focus-ring: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent);
+  --btn-height: 44px;
+  --input-height: 44px;
+  --sidebar-width: 248px;
+  --topbar-height: 60px;
+  --content-max: 1200px;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0e1013;
+  --surface: #16181d;
+  --surface-2: #1c1f25;
+  --surface-3: #242831;
+  --surface-inverse: #f2f3f5;
+
+  --border: #5a6373;
+  --border-strong: #6b7483;
+
+  --text: #eceef0;
+  --text-secondary: #a5aab3;
+  --text-muted: #8d93a0;
+  --text-inverse: #17181c;
+
+  --accent: #8aa4ff;
+  --accent-hover: #9db4ff;
+  --accent-active: #6f8fff;
+  --accent-subtle: #1d2540;
+  --accent-soft: #253158;
+  --accent-contrast: #0c1226;
+
+  --success: #46bd85;
+  --success-subtle: #123726;
+  --success-contrast: #0c1226;
+  --warning: #e3a84c;
+  --warning-subtle: #3a2c14;
+  --danger: #f0657b;
+  --danger-hover: #ff8095;
+  --danger-contrast: #2a0a12;
+  --danger-subtle: #3b1a22;
+  --info: #6c9bff;
+  --info-subtle: #16233f;
+
+  /* ---- Color: code ---- */
+  --code-bg: #1c1f25;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
+}

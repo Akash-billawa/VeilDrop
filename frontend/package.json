@@ -1,0 +1,10 @@
+{
+  "name": "veildrop-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VeilDrop client-side encryption and SPA frontend",
+  "scripts": {
+    "test": "node tests/crypto.test.cjs",
+    "gen-vectors": "node tests/gen-vectors.cjs"
+  }
+}

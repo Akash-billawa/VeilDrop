@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+env:
+  VEILDROP_SESSION_SECRET: ci-only-session-secret-not-for-production
+  VEILDROP_DATABASE_URL: postgresql://veildrop:veildrop@127.0.0.1:5432/veildrop
+  VEILDROP_POSTGRES_ADMIN_URL: postgresql://postgres:Postgres%40123@127.0.0.1:5432/postgres
+  VEILDROP_LOG_LEVEL: WARNING
+
+jobs:
+  backend:
+    name: Backend (SAST + tests)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: veildrop
+          POSTGRES_PASSWORD: "Postgres@123"
+          POSTGRES_DB: veildrop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U veildrop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements-dev.txt
+
+      - name: Prepare PostgreSQL users
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          export PGPASSWORD="Postgres@123"
+          psql -h 127.0.0.1 -U postgres -c "ALTER USER veildrop WITH PASSWORD 'veildrop';"
+
+      - name: Lint (ruff)
+        working-directory: backend
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Type check (mypy)
+        working-directory: backend
+        run: mypy app
+
+      - name: SAST (bandit)
+        working-directory: backend
+        run: bandit -r app
+
+      - name: Dependency audit (pip-audit)
+        run: pip-audit -r backend/requirements.txt
+
+      - name: Run backend tests
+        working-directory: backend
+        run: python -m pytest -q
+
+  frontend:
+    name: Frontend (lint + crypto vectors)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Syntax check all JS
+        run: |
+          set -e
+          for f in frontend/js/*.js; do node --check "$f"; done
+
+      - name: Regenerate cross-language vectors
+        run: node frontend/tests/gen-vectors.cjs
+
+      - name: Run client crypto tests
+        run: node frontend/tests/crypto.test.cjs
+
+      - name: WCAG 2.2 AA static audit
+        run: node frontend/tests/wcag-audit.cjs
+
+      - name: SRI hash integrity (frontend assets)
+        working-directory: backend
+        run: python -m pytest -q tests/test_sri.py

@@ -1,0 +1,48 @@
+# Secrets and local environment — never commit
+.env
+.env.*
+!.env.example
+backend/.env
+config/*.local.*
+
+# Receipt / session key material
+*.pem
+*.key
+!frontend/**/*.key
+
+# Encrypted evidence blobs and DB dumps
+backend/data/uploads/
+*.dump
+*.dump.gpg
+backup/
+backups/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+
+# Logs and run artifacts
+*.log
+
+# Ad-hoc screenshots / probe output from UI work
+*.png
+!frontend/img/*.png
+.playwright-mcp/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Agent scratch state
+.memory.jsonl

@@ -1,0 +1,11 @@
+-r requirements.txt
+
+# Development / SAST tooling (CI installs this file)
+pytest==9.1.0
+pytest-asyncio==1.4.0
+httpx==0.28.1
+mypy==2.3.0
+bandit==1.9.4
+ruff==0.16.2
+pip-audit==2.9.4
+types-aiofiles==24.1.0
