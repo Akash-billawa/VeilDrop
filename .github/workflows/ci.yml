@@ -71,6 +71,10 @@ jobs:
         working-directory: backend
         run: python -m pytest -q
 
+      - name: SRI hash integrity (frontend assets)
+        working-directory: backend
+        run: python -m pytest -q tests/test_sri.py
+
       - name: Dynamic WCAG 2.2 AA audit (real browser)
         run: |
           python -m playwright install chromium --with-deps
@@ -133,7 +137,3 @@ jobs:
 
       - name: WCAG 2.2 AA static audit
         run: node frontend/tests/wcag-audit.cjs
-
-      - name: SRI hash integrity (frontend assets)
-        working-directory: backend
-        run: python -m pytest -q tests/test_sri.py
