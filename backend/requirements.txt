@@ -1,4 +1,4 @@
-fastapi==0.115.0
+fastapi==0.141.1
 uvicorn[standard]==0.52.1
 asyncpg==0.31.0
 cryptography==50.0.0
@@ -7,4 +7,4 @@ python-multipart==0.0.32
 argon2-cffi==25.1.0
 webauthn==3.0.0
 aiofiles==25.1.0
-python-dotenv==1.0.1
+python-dotenv==1.2.3
