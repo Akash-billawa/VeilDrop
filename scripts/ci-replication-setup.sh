@@ -53,6 +53,7 @@ echo "wal_level = replica" >> "$PRIMARY_DIR/postgresql.conf"
 echo "max_wal_senders = 4" >> "$PRIMARY_DIR/postgresql.conf"
 echo "max_replication_slots = 4" >> "$PRIMARY_DIR/postgresql.conf"
 echo "listen_addresses = '127.0.0.1'" >> "$PRIMARY_DIR/postgresql.conf"
+echo "unix_socket_directories = '/tmp'" >> "$PRIMARY_DIR/postgresql.conf"
 
 echo "[repl] start primary"
 if ! run_as_postgres "$PG_BIN/pg_ctl" -D "$PRIMARY_DIR" -l "$BASE/primary.log" start; then
