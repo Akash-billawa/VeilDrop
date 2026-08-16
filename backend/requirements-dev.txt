@@ -7,7 +7,7 @@ httpx==0.28.1
 mypy==2.3.0
 bandit==1.9.4
 ruff==0.16.2
-pip-audit==2.9.4
+pip-audit==2.10.1
 types-aiofiles==24.1.0
 
 # Browser automation (dynamic WCAG audit in frontend/tests/wcag-dynamic-audit.py)
