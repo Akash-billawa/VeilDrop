@@ -8,7 +8,7 @@ on:
 env:
   VEILDROP_SESSION_SECRET: ci-only-session-secret-not-for-production
   VEILDROP_DATABASE_URL: postgresql://veildrop:veildrop@127.0.0.1:5432/veildrop
-  VEILDROP_POSTGRES_ADMIN_URL: postgresql://postgres:Postgres%40123@127.0.0.1:5432/postgres
+  VEILDROP_POSTGRES_ADMIN_URL: postgresql://veildrop:veildrop@127.0.0.1:5432/veildrop
   VEILDROP_LOG_LEVEL: WARNING
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: veildrop
-          POSTGRES_PASSWORD: "Postgres@123"
+          POSTGRES_PASSWORD: veildrop
           POSTGRES_DB: veildrop
         ports:
           - 5432:5432
@@ -47,8 +47,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
-          export PGPASSWORD="Postgres@123"
-          psql -h 127.0.0.1 -U postgres -c "ALTER USER veildrop WITH PASSWORD 'veildrop';"
+          export PGPASSWORD="veildrop"
+          psql -h 127.0.0.1 -U veildrop -d veildrop -c "SELECT 1;"
 
       - name: Lint (ruff)
         working-directory: backend
