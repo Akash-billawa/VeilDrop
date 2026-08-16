@@ -63,7 +63,7 @@ async def _cleanup(window: float) -> None:
     pool = await get_pool()
     async with pool.acquire() as conn:
         await conn.execute(
-            "DELETE FROM rate_limit_buckets WHERE window_start < now() - $1",
+            "DELETE FROM rate_limit_buckets WHERE window_start < now() - $1::interval",
             cutoff,
         )
 

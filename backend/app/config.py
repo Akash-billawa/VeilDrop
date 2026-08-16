@@ -52,7 +52,15 @@ class Settings:
     argon2_memory_cost: int = field(default_factory=lambda: int(os.getenv("VEILDROP_ARGON2_MEMORY", "65536")))
     argon2_parallelism: int = field(default_factory=lambda: int(os.getenv("VEILDROP_ARGON2_PARALLEL", "4")))
 
-    cors_origins: list[str] = field(default_factory=lambda: os.getenv("VEILDROP_CORS_ORIGINS", "*").split(","))
+    # The SPA is served same-origin by this app, so no cross-origin allowance is
+    # needed by default. Empty means "no cross-origin requests permitted".
+    # Wildcard is rejected outright in get_settings(): the API is authenticated
+    # with credentials, and `*` + credentials lets any site drive it.
+    cors_origins: list[str] = field(default_factory=lambda: _parse_origins(os.getenv("VEILDROP_CORS_ORIGINS", "")))
+
+
+def _parse_origins(raw: str) -> list[str]:
+    return [o.strip() for o in raw.split(",") if o.strip()]
 
 
 @lru_cache
@@ -60,4 +68,12 @@ def get_settings() -> Settings:
     s = Settings()
     if not s.session_secret:
         raise RuntimeError("VEILDROP_SESSION_SECRET must be set in production")
+    if "*" in s.cors_origins:
+        raise RuntimeError(
+            "VEILDROP_CORS_ORIGINS must not be '*': this API is credentialed, "
+            "so a wildcard origin would let any website issue authenticated "
+            "requests on a logged-in investigator's behalf. List exact origins "
+            "(e.g. https://veildrop.example), or leave it empty — the SPA is "
+            "served same-origin and needs no CORS allowance."
+        )
     return s

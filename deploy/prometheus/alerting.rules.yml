@@ -1,0 +1,70 @@
+# VeilDrop Prometheus alerting rules.
+#
+# Scrape: backend serves the metrics itself (no exporter needed):
+#   - job_name: veildrop
+#     scheme: http
+#     bearer_token_file: /etc/veildrop/metrics-token
+#     metrics_path: /metrics
+#     static_configs:
+#       - targets: ["127.0.0.1:8000"]
+#
+# Endpoint is Bearer-token gated (VEILDROP_METRICS_TOKEN) and returns 404 when
+# the token is unset, so scraping with an empty bearer_token never fires.
+#
+# Families available (backend/app/services/metrics.py):
+#   veildrop_http_requests_total{method,route,status}                    counter
+#   veildrop_http_request_duration_seconds_bucket{method,route,le}        histogram
+#   veildrop_http_request_duration_seconds_sum{method,route}
+#   veildrop_http_request_duration_seconds_count{method,route}
+#
+# Labels are low-cardinality route templates; case IDs never appear. Counters
+# are per-process and reset on restart - scrape rates, never raw deltas.
+
+groups:
+  - name: veildrop
+    rules:
+      - alert: VeilDropHighP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le) (rate(veildrop_http_request_duration_seconds_bucket[5m]))
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API p99 latency above 2s"
+          description: "p99 request latency has been above 2s for 10m (currently {{ $value | humanizeDuration }}). Check request logs for the slowest routes - large evidence decrypt/re-encrypt is the usual suspect."
+
+      - alert: VeilDropHighErrorRatio
+        expr: |
+          sum(rate(veildrop_http_requests_total{status=~"5[0-9][0-9]"}[5m]))
+            / clamp_min(sum(rate(veildrop_http_requests_total[5m])), 0.001)
+            > 0.05
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "5xx ratio above 5%"
+          description: "More than 5% of requests returned 5xx for 10m (current ratio {{ $value | humanizePercentage }}). Check DB pool exhaustion and upstream errors before declaring an incident."
+
+      - alert: VeilDropAuthFailureSpike
+        expr: |
+          sum(rate(veildrop_http_requests_total{status="401"}[5m]))
+            / clamp_min(sum(rate(veildrop_http_requests_total[5m])), 0.001)
+            > 0.30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Auth failure spike (30%+ of requests are 401)"
+          description: "30% of requests returned 401 for 5m (current ratio {{ $value | humanizePercentage }}). Possible credential stuffing or a broken metrics/investigator token."
+
+      - alert: VeilDropNoTraffic
+        expr: |
+          sum(rate(veildrop_http_requests_total[5m])) == 0
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "No API traffic for 30m"
+          description: "Zero requests observed for 30 minutes. Expected on quiet deployments - silence this alert if the service is intentionally idle. Otherwise the app may be down or unreachable by the scraper."

@@ -47,12 +47,12 @@
               <span class="brand-name">VeilDrop</span>
             </a>
             ${navHTML(active, opts.landing === true)}
-            <div class="nav-actions">
+            <nav class="nav-actions" aria-label="Utility">
               <button class="btn-icon" data-theme-toggle aria-label="Switch theme">${U.themeIcon((typeof window !== "undefined" && window.VeilTheme) ? window.VeilTheme.current() : "light")}</button>
               <a class="btn btn-secondary" href="#/access">Access case</a>
               <a class="btn btn-primary nav-cta-desktop" href="#/submit">Submit report</a>
               <button class="btn-icon mobile-nav-btn" data-mobile-nav aria-label="Open menu" aria-expanded="false" aria-controls="site-nav">${U.icon("menu")}</button>
-            </div>
+            </nav>
           </div>
         </header>
         <main class="site-main" id="site-main">${contentHTML}</main>
@@ -74,20 +74,20 @@
               <p class="footer-blurb">Client-side encrypted reporting and secure evidence exchange. Your materials are sealed before they ever leave your device.</p>
             </div>
             <nav class="footer-col" aria-label="Product">
-              <h4 class="footer-title">Product</h4>
+              <h3 class="footer-title">Product</h3>
               <a class="footer-link" href="#/features">Features</a>
               <a class="footer-link" href="#/security">Security</a>
               <a class="footer-link" href="#/submit">Submit a report</a>
               <a class="footer-link" href="#/access">Access a case</a>
             </nav>
             <nav class="footer-col" aria-label="Resources">
-              <h4 class="footer-title">Resources</h4>
+              <h3 class="footer-title">Resources</h3>
               <a class="footer-link" href="#/faq">FAQ</a>
               <a class="footer-link" href="#/contact">Contact</a>
               <a class="footer-link" href="#/">How it works</a>
             </nav>
             <nav class="footer-col" aria-label="Legal">
-              <h4 class="footer-title">Legal</h4>
+              <h3 class="footer-title">Legal</h3>
               <a class="footer-link" href="#/security">Privacy</a>
               <a class="footer-link" href="#/faq">Terms</a>
               <a class="footer-link" href="#/security">Security</a>
@@ -853,7 +853,7 @@
               </div>`).join("")}
           </div>
           <div class="card card-pad faq-cta" data-reveal>
-            <h3>Still curious?</h3>
+            <h2>Still curious?</h2>
             <p>Get in touch through the contact page, or jump straight into a live, encrypted case.</p>
             <div class="cta-actions">
               <a class="btn btn-primary" href="#/contact">Contact me</a>
@@ -873,7 +873,7 @@
         <div class="container">
           <div class="contact-grid">
             <div class="card card-pad" data-reveal>
-              <h3>Send a message</h3>
+              <h2>Send a message</h2>
               <p class="contact-sub">This is a static demo — messages aren't transmitted anywhere. For anything sensitive, use a <a href="#/submit">live encrypted report</a> instead; email is not end-to-end encrypted.</p>
               <form id="contact-form" class="contact-form" novalidate>
                 <div class="field">

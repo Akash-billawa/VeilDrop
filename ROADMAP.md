@@ -2,7 +2,7 @@
 
 **Post-Quantum-Ready Zero-Knowledge Anonymous Reporting & Secure Evidence Exchange Platform**
 
-Last updated: 2026-08-13
+Last updated: 2026-08-16
 
 ---
 
@@ -26,12 +26,12 @@ VeilDrop lets anonymous reporters submit sensitive reports and evidence that are
 | 4 | Investigator Identity — WebAuthn creds, Argon2id fallback, sessions, RBAC | ✅ Mostly done |
 | 5 | Recipient Envelopes — investigator HPKE keys, envelope create/retrieve, client decrypt | ✅ Done |
 | 6 | Evidence — chunked client encryption, content-addressed upload, secure retrieval | ✅ Done |
-| 7 | Database Defense — RLS policies, least-privilege roles | ✅ RLS enabled on core tables |
+| 7 | Database Defense — RLS policies, least-privilege roles | ✅ RLS enabled on core tables; streaming standby (WAL) provisioned with slot, health check + failover scripts, end-to-end `-m replication` tests |
 | 8 | Advanced Security — burn-on-read, signed receipts, case expiration, audit log | ✅ Done |
 | 9 | Security Hardening — CSP, security headers, rate limiting, middleware | ✅ SRI hashes, pinned deps, SAST/CI (ruff/mypy/bandit/pip-audit/pytest in `.github/workflows/ci.yml`) |
 | 10 | Post-Quantum Extension — ML-KEM hybrid HPKE | ✅ `CryptoVersion.V2` hybrid (ML-KEM-768 + X25519, dual-KEM combiner) registered, engine + dispatch + tests; inactive by default — client seal gated on browser ML-KEM |
 | 11 | Verification — threat-model tests, concurrency tests, vectors, performance | ✅ Spec KATs (RFC 5869 HKDF, NIST AES-256-GCM), concurrent burn-on-read (10×N, exactly 1 win), `-m perf` benchmarks |
-| 12 | Production Readiness — WCAG 2.2 AA, observability, backups, ops docs | ✅ Static WCAG 2.2 AA audit (`frontend/tests/wcag-audit.cjs`, 0 failures — muted-text contrast fixed in both themes), JSON structured logging + request log middleware, `docs/ops.md`, `scripts/backup.ps1` (encrypted `pg_dump`) |
+| 12 | Production Readiness — WCAG 2.2 AA, observability, backups, ops docs | ✅ Static WCAG 2.2 AA audit (`frontend/tests/wcag-audit.cjs`, 0 failures) + dynamic real-browser audit (`frontend/tests/wcag-dynamic-audit.py`, 66/0/0, CI-wired), JSON structured logging + request log middleware, Prometheus `/metrics` (token-gated) + alerting rules, `docs/ops.md`, `scripts/backup.ps1` (encrypted `pg_dump`) + `scripts/backup-schedule.ps1` (scheduled task, DPAPI passphrase) + passed restore drill |
 
 **Stage 2 (public website)** — 6-page marketing site (Home, About, Security, Features, FAQ, Contact) with shared nav/footer, scroll-reveal, testimonial carousel, FAQ accordion, contact form. Spec: `docs/superpowers/specs/2026-08-06-stage2-public-website-design.md`. ✅ Done.
 
@@ -61,6 +61,7 @@ VeilDrop lets anonymous reporters submit sensitive reports and evidence that are
 - `docs/superpowers/specs/2026-08-06-stage2-public-website-design.md` — Stage 2 website spec (approved)
 - `VeilDrop Premium UI-UX Master Prompt.pdf` — UI/UX master prompt
 - `scripts/backup.ps1` — timestamped, GPG-AES256-encrypted `pg_dump` + SHA-256 manifest + retention
+- `scripts/backup-schedule.ps1` — registers the scheduled backup task; passphrase stored DPAPI-encrypted (owner-only ACL)
 
 ---
 
@@ -69,6 +70,7 @@ VeilDrop lets anonymous reporters submit sensitive reports and evidence that are
 - **Security hardening (Phase 9 ✅):** SRI sha384 hashes + `crossorigin` on all CSS/JS in `frontend/index.html` (validated by `backend/tests/test_sri.py`); deps pinned to exact `==` in `requirements.txt` / `pyproject.toml` / `requirements-dev.txt`; SAST/CI added (`.github/workflows/ci.yml` runs ruff check/format, mypy, bandit, pip-audit, pytest against a postgres:16 service, plus frontend node checks and vector tests). `ruff check`, `ruff format --check`, `mypy app`, and `bandit -r app` are all clean.
 - **Phase 11 Verification ✅:** spec known-answer vectors (`test_spec_vectors.py` — RFC 5869 HKDF-SHA-256 cases 1–2, NIST AES-256-GCM, cross-checked against OpenSSL), concurrent burn-on-read already covered in `test_burn.py`, and `-m perf` benchmark smoke tests (`test_perf.py`) with loose thresholds.
 - **Phase 10 Post-Quantum ✅ (gated):** `CryptoVersion.V2_HYBRID_MLKEM768_X25519` — `app/crypto/hybrid_kem.py` implements X25519 + ML-KEM-768 with a dual-KEM concatenation-then-hash combiner (ARCHITECTURE.md §21). Registered in `SUITES`, `crypto_versions` table (V2 inactive), and `CryptoProvider` dispatch with explicit `version=` routing. 15 tests in `test_hybrid_kem.py` (roundtrip, wrong recipient, tamper/truncation, cross-version isolation, metadata). Client-side seal for V2 is deferred until browsers expose ML-KEM in WebCrypto.
+- **Phase 7 replication ✅:** streaming standby supported end-to-end — `scripts/replica.ps1` (Windows provisioning via `pg_basebackup -C -S <slot> -R`), `scripts/ci-replication-setup.sh` + `-m replication` pytest suite (topology, streaming+slot, WAL replay, read-only standby, promotion), `scripts/replication-check.ps1` (exit-code health check), `scripts/promote.ps1` (failover runbook in `docs/ops.md` §2a). Live-verified locally against PostgreSQL 17 pair (5/5 tests, check HEALTHY).
 - **Fixed CSP cross-origin bug:** `reporter.js` / `investigator.js` hardcoded `const API='http://localhost:8000'` while the app is served on `127.0.0.1:8000`; CSP `connect-src 'self'` blocked it. Changed both to `const API=''` (same-origin). Live report submissions now work end-to-end (no "Vault unavailable — demo case" fallback).
 - **Phase 12 observability ✅:** `app/middleware/logging.py` — `JsonFormatter` (one JSON object per record; only allowlisted extras) + `RequestLogMiddleware` (method/path/status/duration/correlation per request). `CorrelationMiddleware` sets `request.state.correlation_id`; order is RequestLog → Correlation → SecurityHeaders. `VEILDROP_LOG_FORMAT=json` enables it; live-smoke-tested on `/health` (structured startup + request logs, correlation id echoed). `config.py` gained `log_format`.
 - **Phase 12 ops ✅:** `docs/ops.md` (env reference, pg_dump restore procedure, what else must be backed up, key rotation, deploy checklist, incident table) + `scripts/backup.ps1` (GPG-AES256-encrypted timestamped `pg_dump -Fc`, SHA-256 manifest, retention pruning, SecureString passphrase, never writes passphrase to disk).
@@ -77,6 +79,10 @@ VeilDrop lets anonymous reporters submit sensitive reports and evidence that are
 - **Fixed site shell bugs:** mobile nav backdrop appended to `document.body` (backdrop-filter made `.site-nav` the containing block), footer Privacy→`#/security` / Terms→`#/faq` redirects, `[id]{scroll-margin-top}` for sticky-nav offset.
 - **Confirmed non-bugs (by design):** metric styles, wizard stepper dots offscreen on `/submit|mobile` (internally scrollable), `#continue-case` disabled until `#creds-confirm` checked, evidence confirm reset on edit→stage2.
 - **Responsive verification:** desktop / tablet / mobile screenshots (e.g. `landing-desktop-responsive.png`, `landing-mobile-responsive.png`) and laptop-hero/CTA/section screenshots at 1366 px; master landing v2 built (`master-landing-desktop-v2.png`).
+
+- **Fixed intermittent 500 on case creation (root cause of "Vault unavailable — demo case"):** `backend/app/middleware/rate_limit.py` `_cleanup` ran `DELETE FROM rate_limit_buckets WHERE window_start < now() - $1` with an untyped Python `timedelta` param; Postgres inferred `now() - $1` as `timestamptz - timestamptz = interval`, then `timestamptz < interval` threw `UndefinedFunctionError` → 500. Since cleanup runs once per 60 s, the **first rate-limited request in every minute window** 500'd, so live reporter submissions intermittently fell back to the client-side demo case (`VEIL-77D913D6E815`). Fixed with explicit `$1::interval` cast; verified by hammering the endpoint across three consecutive 60 s windows (all 200, no errors) and the full live loop (reporter create → admin login/assign → investigator list). Note: `rate_limit_case_per_min` default is 5/min per IP; a 429 also triggers the demo fallback.
+- **Admin case list + "Assign to me" for security_admin:** Added `GET /api/v1/admin/cases` endpoint (returns all cases with `is_assigned` / `permission` / `assignment_count` per investigator); added `list_all_cases()` in `case.py` service. Investigator UI (`investigator.js`) now fetches all cases for `security_admin` instead of only assigned ones, adds an **"Unassigned" tab**, and shows an **"Assign to me"** button on unassigned rows (wired to `POST /api/v1/admin/assignments`). Regenerated investigator.js SRI hash (`v=13`).
+- **Investigator decryption + message composer (full E2E loop):** On assignment, the admin endpoint now **auto-copies the reporter's wrapped DEK** into an investigator envelope (same algorithm, same wrapped key — demo shortcut for key distribution). Investigator conversation tab now shows a **recovery-secret unlock input** that derives KEK → unwraps DEK → decrypts all messages client-side (via `C.deriveKek` / `C.unwrapDek` / `C.decryptObject`). Once unlocked, the **message composer** encrypts replies client-side (AES-256-GCM via `C.encryptObject`) and POSTs them as Form data. Burn-on-read messages can be revealed and consumed in-browser. Investigator `POST /cases/{id}/messages` endpoint changed from query params to **Form body** (consistent with reporter endpoint). Regenerated investigator.js SRI hash (`v=15`). Full E2E verified: reporter submit → admin assign (auto-envelope) → investigator unlock + decrypt → investigator reply → reporter sees both messages.
 
 ### Verification suites (all green unless noted)
 | Suite | Result |
@@ -89,9 +95,13 @@ VeilDrop lets anonymous reporters submit sensitive reports and evidence that are
 | `verify-all.cjs` | 9/9 |
 | `node --check` (all JS) | parse ok |
 | `site.js` self-check | 4/4 |
-| Backend pytest (`backend/tests/`) | green — authz, burn, crypto, database, expiration, hybrid_kem, observability, perf (`-m perf`), protocol, receipt, spec_vectors, sri, vectors (`81 passed` full suite) |
-| `frontend/tests/wcag-audit.cjs` | PASS 77 / WARN 23 / FAIL 0 (exit 0) |
+| Backend pytest (`backend/tests/`) | green — authz, burn, crypto, database, expiration, hybrid_kem, observability, perf (`-m perf`), protocol, receipt, spec_vectors, sri, vectors, prometheus_rules (`100 passed` full suite) |
+| `pytest -m replication` | 5/5 green against a live primary+standby pair (CI: `scripts/ci-replication-setup.sh`) |
+| `frontend/tests/wcag-audit.cjs` | PASS 84 / WARN 0 / FAIL 0 (exit 0) |
+| `frontend/tests/wcag-dynamic-audit.py` | PASS 66 / WARN 0 / FAIL 0 — real Chromium: tab order + focus indicators on all 9 views, skip link, FAQ accordion ARIA, contact-form error identification + live regions, reduced-motion clamp, 320px reflow (CI: backend job) |
 | `backend/tests/test_sri.py` | green — all assets pinned via SRI |
+| `backend/tests/test_prometheus_rules.py` | 4/4 — alerting rules reference only families that exist in `metrics.py`, valid severities/durations, balanced parens |
+| `scripts/backup-schedule.ps1` + restore drill | registered/unregistered a scheduled task with DPAPI passphrase blob (owner-only ACL, roundtrip verified); full drill passed: seed → `backup.ps1` → gpg decrypt → `pg_restore` into scratch PG 17 → byte-for-byte content match → teardown |
 | `python -m ruff check` / `mypy app` / `bandit -r app` | clean |
 
 ---
@@ -99,9 +109,9 @@ VeilDrop lets anonymous reporters submit sensitive reports and evidence that are
 ## 5. What's Next
 
 1. **Frontend ML-KEM (Phase 10 follow-up)** — switch reporter/investigator to V2 hybrid envelopes once browsers expose ML-KEM in WebCrypto; update `frontend/js/crypto.js` + regenerate cross-language vectors, then flip `crypto_versions` V2 to active.
-2. **Dynamic WCAG verification** — browser-driven checks (focus order, live-region announcements, reduced-motion behavior) beyond the static audit; currently listed as manual items in the audit output.
-3. **Metrics endpoint** — Prometheus `/metrics` (or OpenTelemetry export) now that request logs capture `duration_ms`; alert on p99 and 5xx rate.
-4. **Backup scheduling** — wire `scripts/backup.ps1` into a scheduled task/cron and complete a restore drill against a scratch DB.
+2. **Dynamic WCAG verification** — DONE: `frontend/tests/wcag-dynamic-audit.py` (Playwright) automates the static audit's manual items — 2.4.3/2.4.7 tab order + visible focus per view, 2.4.1 skip link, 4.1.2 FAQ accordion `aria-expanded`, 3.3.1/3.3.2/4.1.3 contact-form errors + live regions, 2.3.3 reduced-motion clamp, 1.4.10 reflow at 320px; PASS 66/0/0. Fixed along the way: `<nav>` landmarks on the submit/access/login/case shells (was `div.nav-actions`), heading-level skips (footer columns h4→h3, "Still curious?"/"Send a message" h3→h2). Wired into CI (playwright pinned in `requirements-dev.txt`).
+3. **Metrics endpoint** — DONE: Prometheus `/metrics` behind `VEILDROP_METRICS_TOKEN` (404 when unset) with `veildrop_http_requests_total` + duration histogram; `deploy/prometheus/alerting.rules.yml` (p99 > 2s, 5xx ratio > 5%, 401 spike, no-traffic) validated by `backend/tests/test_prometheus_rules.py` and documented in `docs/ops.md` §3.
+4. **Backup scheduling** — DONE: `scripts/backup-schedule.ps1` registers a scheduled task running `scripts/backup.ps1` with the passphrase persisted as a DPAPI blob (owner-only ACL, never plaintext); restore drill passed end-to-end against a scratch PG 17 (seed → encrypted backup → gpg decrypt → `pg_restore` → byte-for-byte match → teardown). Runbook in `docs/ops.md` §2.
 5. **Platform choices** (to be confirmed): CI/CD provider, deployment target, real WebAuthn provider config, receipt key management.
 
 ---
@@ -112,4 +122,4 @@ VeilDrop lets anonymous reporters submit sensitive reports and evidence that are
 - `.env` holds session secret + receipt key paths (dev); production secrets/rotation not yet set up.
 - `app_audit.py` flags 6 items all traced to the intentional `/submit|mobile` wizard-dot design.
 - Post-quantum ML-KEM V2 is registered but inactive — client seal waits for browser ML-KEM in WebCrypto.
-- Observability is log-only: no metrics endpoint yet, and backup script exists but isn't scheduled.
+- Scheduled backup task is registered per-machine (`backup-schedule.ps1`) but not yet run on a real deployment; production Prometheus + Alertmanager wiring still to be stood up.

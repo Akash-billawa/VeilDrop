@@ -9,3 +9,6 @@ bandit==1.9.4
 ruff==0.16.2
 pip-audit==2.9.4
 types-aiofiles==24.1.0
+
+# Browser automation (dynamic WCAG audit in frontend/tests/wcag-dynamic-audit.py)
+playwright==1.60.0

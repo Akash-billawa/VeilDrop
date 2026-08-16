@@ -192,6 +192,39 @@ async def get_assigned_cases(investigator_id: str) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+async def list_all_cases(investigator_id: str | None = None) -> list[dict]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        if investigator_id:
+            rows = await conn.fetch(
+                """
+                SELECT c.case_id, c.status, c.created_at, c.expires_at,
+                       c.reporter_meta, c.crypto_version,
+                       ca.permission, ca.assigned_at,
+                       CASE WHEN ca.case_id IS NULL THEN false ELSE true END AS is_assigned,
+                       (SELECT count(*) FROM case_assignments ca2 WHERE ca2.case_id = c.case_id AND ca2.revoked_at IS NULL)::int AS assignment_count
+                FROM cases c
+                LEFT JOIN case_assignments ca
+                  ON ca.case_id = c.case_id AND ca.investigator_id = $1::uuid AND ca.revoked_at IS NULL
+                ORDER BY c.created_at DESC
+                """,
+                investigator_id,
+            )
+        else:
+            rows = await conn.fetch(
+                """
+                SELECT c.case_id, c.status, c.created_at, c.expires_at,
+                       c.reporter_meta, c.crypto_version,
+                       NULL::text AS permission, NULL::timestamptz AS assigned_at,
+                       false AS is_assigned,
+                       (SELECT count(*) FROM case_assignments ca WHERE ca.case_id = c.case_id AND ca.revoked_at IS NULL)::int AS assignment_count
+                FROM cases c
+                ORDER BY c.created_at DESC
+                """
+            )
+        return [dict(r) for r in rows]
+
+
 async def check_access(case_id: str, investigator_id: str) -> str | None:
     pool = await get_pool()
     async with pool.acquire() as conn:

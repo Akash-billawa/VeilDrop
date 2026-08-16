@@ -80,10 +80,10 @@ window.VeilInvestigator = (() => {
               <img class="brand-logo" src="img/logo.png" alt="VeilDrop logo" width="44" height="44" />
               <span class="brand-name">VeilDrop</span>
             </a>
-            <div class="nav-actions">
+            <nav class="nav-actions" aria-label="Primary">
               <button class="btn-icon" data-theme-toggle aria-label="Switch theme">${U.themeIcon(window.VeilTheme ? window.VeilTheme.current() : "light")}</button>
               <a class="btn btn-ghost" href="#/">Back to home</a>
-            </div>
+            </nav>
           </div>
         </header>
         <main class="site-main">
@@ -333,15 +333,26 @@ window.VeilInvestigator = (() => {
     { key: "all", label: "All cases" },
     { key: "active", label: "Active" },
     { key: "resolved", label: "Closed / expired" },
+    { key: "unassigned", label: "Unassigned" },
   ];
   const PAGE_SIZE = 6;
 
   async function paintCases(host) {
     host.innerHTML = `<div class="card card-pad">${U.skeleton(5)}</div>`;
     let all;
+    const isAdmin = session && session.role === "security_admin";
     try {
-      const res = await apiFetch("/api/v1/investigator/cases");
-      all = (res.cases || []).filter((c) => c.case_id);
+      if (isAdmin) {
+        const res = await apiFetch("/api/v1/admin/cases");
+        all = (res.cases || []).map((c) => ({
+          ...c,
+          is_assigned: c.is_assigned,
+          assignment_count: c.assignment_count || 0,
+        }));
+      } else {
+        const res = await apiFetch("/api/v1/investigator/cases");
+        all = (res.cases || []).filter((c) => c.case_id).map((c) => ({ ...c, is_assigned: true, assignment_count: 1 }));
+      }
     } catch (err) {
       if (err.status === 401) { signOut(); return; }
       host.innerHTML = `
@@ -365,6 +376,7 @@ window.VeilInvestigator = (() => {
       let rows = all.slice();
       if (tab === "active") rows = rows.filter((c) => c.status !== "closed" && c.status !== "expired");
       if (tab === "resolved") rows = rows.filter((c) => c.status === "closed" || c.status === "expired");
+      if (tab === "unassigned") rows = rows.filter((c) => !c.is_assigned);
       if (category !== "all") rows = rows.filter((c) => categoryOf(c) === category);
 
       rows.sort((a, b) => {
@@ -400,11 +412,15 @@ window.VeilInvestigator = (() => {
             <div class="mono" style="color:var(--text-muted)">${esc(c.case_id)}</div>
           </td>
           <td data-label="Status"><span class="badge ${statusClass(c.status)}"><span class="dot"></span> ${esc(statusLabel(c.status))}</span></td>
-          <td data-label="Access" class="cell-secondary">${esc(c.permission || "read")}</td>
+          <td data-label="Access" class="cell-secondary">${esc(c.permission || (c.is_assigned ? "read" : "unassigned"))}</td>
           <td data-label="Envelope" class="cell-secondary">${c.envelope ? "Sealed" : "None issued"}</td>
           <td data-label="Created" class="cell-secondary">${U.timeAgo(c.created_at)}</td>
           <td data-label="Expires" class="cell-secondary">${c.expires_at ? U.formatDate(c.expires_at) : "—"}</td>
-          <td class="table-actions"><button class="btn-icon sm" aria-label="Open case ${esc(c.case_id)}">${U.icon("arrow")}</button></td>
+          <td class="table-actions">
+            ${c.is_assigned
+              ? `<button class="btn-icon sm" aria-label="Open case ${esc(c.case_id)}">${U.icon("arrow")}</button>`
+              : `<button class="btn btn-primary btn-xs" data-assign="${esc(c.case_id)}" aria-label="Assign case ${esc(c.case_id)} to me">${U.icon("plus")} Assign</button>`}
+          </td>
         </tr>`).join("");
     };
 
@@ -412,6 +428,7 @@ window.VeilInvestigator = (() => {
       all: all.length,
       active: all.filter((c) => c.status !== "closed" && c.status !== "expired").length,
       resolved: all.filter((c) => c.status === "closed" || c.status === "expired").length,
+      unassigned: all.filter((c) => !c.is_assigned).length,
     };
 
     host.innerHTML = `
@@ -427,7 +444,7 @@ window.VeilInvestigator = (() => {
 
         <div class="card">
           <div class="card-toolbar">
-            <span class="field-hint">Filter and sort the cases assigned to you.</span>
+            <span class="field-hint">${isAdmin ? "All cases in the vault. Unassigned cases show an Assign button." : "Filter and sort the cases assigned to you."}</span>
             <select class="mini-select" id="case-category" aria-label="Filter by category">
               <option value="all">All categories</option>
               ${categories.map((c) => `<option value="${c}">${esc(c)}</option>`).join("")}
@@ -469,6 +486,31 @@ window.VeilInvestigator = (() => {
     }));
     host.querySelector("#page-prev").addEventListener("click", () => { if (page > 1) { page--; apply(); } });
     host.querySelector("#page-next").addEventListener("click", () => { page++; apply(); });
+
+    host.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-assign]");
+      if (!btn) return;
+      e.stopPropagation();
+      const caseId = btn.dataset.assign;
+      btn.disabled = true;
+      btn.textContent = "Assigning…";
+      try {
+        await apiFetch("/api/v1/admin/assignments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ case_id: caseId, investigator_id: session.investigator_id, permission: "admin" }),
+        });
+        U.toast("Case assigned to you.", "success");
+        const row = all.find((c) => c.case_id === caseId);
+        if (row) { row.is_assigned = true; row.permission = "admin"; }
+        apply();
+      } catch (err) {
+        U.toast(err.detail || "Assignment failed.", "error");
+        btn.disabled = false;
+        btn.textContent = "Assign";
+      }
+    });
+
     apply();
     bindRows(host);
   }
@@ -626,6 +668,33 @@ window.VeilInvestigator = (() => {
 
   function sealedMsgCard(m) {
     const sender = m.sender_type === "reporter" ? "Reporter" : "Investigator";
+    if (m._plaintext && !(m.burn_after_read && m.sender_type === "reporter" && !m.consumed_at)) {
+      return `
+        <div class="msg ${m.sender_type === "reporter" ? "reporter" : "investigator"}" data-searchable>
+          <div class="msg-meta">
+            <span class="msg-name">${sender}</span>
+            <span>·</span>
+            <span>${U.timeAgo(m.created_at)}</span>
+            ${m.burn_after_read ? '<span class="badge badge-warning"><span class="dot"></span> Burn-on-read</span>' : ""}
+          </div>
+          <div class="msg-bubble">${esc(m._plaintext)}</div>
+          <div class="file-info" style="margin-top:var(--sp-1);align-self:flex-end"><span class="mono">decrypted locally · AES-256-GCM v${m.crypto_version || 1}</span></div>
+        </div>`;
+    }
+    if (m.burn_after_read && m.sender_type === "reporter" && !m.consumed_at) {
+      return `
+        <div class="burn-card sealed-card" data-burn="${m.message_id}" style="border-color:var(--warning)">
+          <span class="file-icon" style="color:var(--warning)">${U.icon("flame")}</span>
+          <div style="flex:1;min-width:0">
+            <div class="row" style="gap:var(--sp-2);flex-wrap:wrap">
+              <strong style="color:var(--warning)">Burn-on-read message</strong>
+            </div>
+            <div class="file-info" style="margin-top:var(--sp-1)">${U.timeAgo(m.created_at)} · Sealed under the case envelope</div>
+            <div class="file-info">A one-time message from the reporter is waiting. It becomes unreadable after you open it once.</div>
+          </div>
+          <button class="btn btn-danger" data-reveal="${m.message_id}">Reveal message</button>
+        </div>`;
+    }
     return `
       <div class="sealed-card" data-searchable>
         <span class="file-icon">${U.icon("lock")}</span>
@@ -636,24 +705,147 @@ window.VeilInvestigator = (() => {
             <span class="field-hint">${U.timeAgo(m.created_at)}</span>
           </div>
           <div class="file-info" style="margin-top:var(--sp-1)">Sealed under the case envelope · AES-256-GCM v${m.crypto_version || 1}</div>
-          <div class="file-info">${U.icon("lock")} Contents decrypt only on the reporter's device — in-browser decryption isn't available in this console yet.</div>
         </div>
       </div>`;
   }
 
   function wsCaseConversation(ws, data) {
     const messages = data.messages || [];
+    const hasEnvelope = data.envelope && data.envelope.wrapped_dek;
+    let dek = null;
+
+    function renderMessages() {
+      const thread = ws.querySelector("#inv-thread");
+      if (!thread) return;
+      thread.innerHTML = messages.length
+        ? messages.map(sealedMsgCard).join("")
+        : emptyState(U.icon("edit"), "No messages yet", "Send a message below to start the conversation.");
+      thread.querySelectorAll("[data-reveal]").forEach((btn) => btn.addEventListener("click", async () => {
+        const id = btn.dataset.reveal;
+        const msg = messages.find((m) => m.message_id === id);
+        if (!msg || !dek) return;
+        try {
+          const parsed = C.parseObjectAad(C.hexToBytes(msg.aad));
+          const pt = await C.decryptObject(dek, parsed.purpose, parsed.objectId, C.hexToBytes(msg.ciphertext), C.hexToBytes(msg.nonce), C.hexToBytes(msg.tag), parsed.version);
+          msg._plaintext = C.toUtf8(pt);
+          msg.consumed_at = new Date().toISOString();
+          await apiFetch(`/api/v1/investigator/cases/${encodeURIComponent(data.case_id)}/messages/${id}/consume`, { method: "POST" });
+          renderMessages();
+          U.toast("Burn-on-read message decrypted.", "success");
+        } catch (e) { U.toast("Failed to decrypt burn message.", "error"); }
+      }));
+    }
+
     ws.innerHTML = `
       <div class="card card-pad">
+        ${hasEnvelope ? `
         <div class="alert alert-info" style="margin-bottom:var(--sp-5)">
           <span class="icon">${U.icon("lock")}</span>
           <div class="alert-body">
-            <span class="alert-title">Sealed conversation</span>
-            <span>Messages are encrypted under the case envelope and stored as ciphertext only. HPKE envelope opening for investigators is Phase 5 — it isn't wired into this console yet, so messages are shown sealed and replies can't be composed here.</span>
+            <span class="alert-title">Unlock conversation</span>
+            <span>Enter the reporter's recovery secret to decrypt messages in your browser. The vault never sees plaintext.</span>
           </div>
         </div>
-        ${messages.length ? messages.map(sealedMsgCard).join("") : emptyState(U.icon("edit"), "No messages yet", "An investigator has not responded to this case yet.")}
+        <div class="field" style="margin-bottom:var(--sp-5)">
+          <label for="inv-recovery">Recovery secret</label>
+          <div class="secret-input">
+            <input class="input mono" id="inv-recovery" type="password" placeholder="Enter the reporter's recovery secret (64 hex chars)" autocomplete="off" spellcheck="false" />
+            <button class="btn-icon" type="button" data-secret-toggle="inv-recovery" aria-label="Show recovery secret">${U.icon("eye")}</button>
+          </div>
+          <button class="btn btn-primary" id="inv-unlock" style="margin-top:var(--sp-2)">${U.icon("lock")} Decrypt conversation</button>
+        </div>
+        ` : `
+        <div class="alert alert-warning" style="margin-bottom:var(--sp-5)">
+          <span class="icon">${U.icon("alert")}</span>
+          <div class="alert-body">
+            <span class="alert-title">No envelope</span>
+            <span>No envelope has been issued to you for this case. Ask an admin to assign you to this case first.</span>
+          </div>
+        </div>`}
+        <div class="thread" id="inv-thread">
+          ${messages.length ? messages.map(sealedMsgCard).join("") : emptyState(U.icon("edit"), "No messages yet", "Send a message below to start the conversation.")}
+        </div>
+        ${hasEnvelope ? `
+        <div class="composer" style="margin-top:var(--sp-4)">
+          <div class="field" style="flex:1">
+            <label for="inv-msg" class="sr-only">Message</label>
+            <textarea class="input" id="inv-msg" rows="2" placeholder="Type a message to the reporter…" disabled></textarea>
+          </div>
+          <button class="btn btn-primary" id="inv-send" disabled>${U.icon("edit")} Send</button>
+        </div>` : ""}
       </div>`;
+
+    U.secretToggles(ws);
+
+    if (hasEnvelope) {
+      const unlockBtn = ws.querySelector("#inv-unlock");
+      const recoveryInput = ws.querySelector("#inv-recovery");
+      const msgInput = ws.querySelector("#inv-msg");
+      const sendBtn = ws.querySelector("#inv-send");
+
+      unlockBtn.addEventListener("click", async () => {
+        const secret = recoveryInput.value.trim();
+        if (!secret) { U.toast("Enter the recovery secret.", "error"); return; }
+        let secretBytes;
+        try { secretBytes = C.hexToBytes(secret); } catch (_) { U.toast("Invalid hex.", "error"); return; }
+        try {
+          const kek = await C.deriveKek(secretBytes);
+          dek = await C.unwrapDek(kek, C.hexToBytes(data.envelope.wrapped_dek));
+          for (const m of messages) {
+            if (m.aad && !m._plaintext) {
+              try {
+                const parsed = C.parseObjectAad(C.hexToBytes(m.aad));
+                const pt = await C.decryptObject(dek, parsed.purpose, parsed.objectId, C.hexToBytes(m.ciphertext), C.hexToBytes(m.nonce), C.hexToBytes(m.tag), parsed.version);
+                m._plaintext = C.toUtf8(pt);
+              } catch (_) { m._plaintext = null; }
+            }
+          }
+          renderMessages();
+          if (msgInput) { msgInput.disabled = false; sendBtn.disabled = false; }
+          U.toast("Conversation decrypted.", "success");
+        } catch (_) {
+          U.toast("Wrong recovery secret — could not unwrap the data key.", "error");
+        }
+      });
+
+      if (sendBtn) {
+        sendBtn.addEventListener("click", async () => {
+          if (!dek) { U.toast("Unlock the conversation first.", "error"); return; }
+          const text = (msgInput.value || "").trim();
+          if (!text) return;
+          sendBtn.disabled = true;
+          try {
+            const objectId = crypto.randomUUID();
+            const enc = await C.encryptObject(dek, "message", objectId, C.toBytes(text));
+            const fd = new FormData();
+            fd.append("ciphertext", C.bytesToHex(enc.ciphertext));
+            fd.append("nonce", C.bytesToHex(enc.nonce));
+            fd.append("tag", C.bytesToHex(enc.tag));
+            fd.append("aad", C.bytesToHex(enc.aad));
+            fd.append("crypto_version", String(enc.version || 1));
+            const result = await apiFetch(`/api/v1/investigator/cases/${encodeURIComponent(data.case_id)}/messages`, { method: "POST", body: fd });
+            messages.push({
+              message_id: result.message_id,
+              sender_type: "investigator",
+              ciphertext: C.bytesToHex(enc.ciphertext),
+              nonce: C.bytesToHex(enc.nonce),
+              tag: C.bytesToHex(enc.tag),
+              aad: C.bytesToHex(enc.aad),
+              crypto_version: enc.version || 1,
+              burn_after_read: false,
+              consumed_at: null,
+              created_at: result.created_at,
+              _plaintext: text,
+            });
+            renderMessages();
+            msgInput.value = "";
+            U.toast("Message sent.", "success");
+          } catch (e) {
+            U.toast(e.detail || "Failed to send message.", "error");
+          } finally { sendBtn.disabled = false; }
+        });
+      }
+    }
   }
 
   function wsCaseEvidence(ws, data) {
@@ -736,7 +928,7 @@ window.VeilInvestigator = (() => {
                 <div class="kv-row"><span class="kv-label">Wrapped DEK</span><span class="kv-value mono">${esc(String(data.envelope.wrapped_dek || "").slice(0, 24))}…</span></div>
                 <div class="kv-row"><span class="kv-label">Crypto version</span><span class="kv-value mono">v${data.crypto_version}</span></div>
               </div>
-              <p class="field-hint" style="margin-top:var(--sp-4)">${U.icon("lock")} Your envelope lets you unwrap the case data key once HPKE client decryption ships (Phase 5).</p>` : `
+              <p class="field-hint" style="margin-top:var(--sp-4)">${U.icon("lock")} Your envelope lets you unwrap the case data key in-browser using the reporter's recovery secret. Enter it on the Conversation tab to decrypt messages.</p>` : `
               <p class="field-hint">No envelope has been issued to you for this case yet. An admin assigns one via the vault API.</p>`}
           </div>
         </div>

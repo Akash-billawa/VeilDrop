@@ -5,9 +5,12 @@
 .DESCRIPTION
   Runs pg_dump -Fc, encrypts the dump with GPG (AES-256), writes a SHA-256
   manifest, and prunes old dumps (keep N by default). Passphrase is read via
-  -Passphrase or prompted; never written to disk.
+  -Passphrase, loaded from -PassphraseFile, or prompted; never written to disk
+  in clear text.
 .EXAMPLE
   .\scripts\backup.ps1 -OutDir .\backups
+.EXAMPLE
+  .\scripts\backup.ps1 -OutDir .\backups -PassphraseFile C:\ProgramData\VeilDrop\backup-passphrase.bin
 .PARAMETER OutDir
   Directory for dumps + manifest. Created if missing.
 .PARAMETER DatabaseUrl
@@ -16,6 +19,10 @@
   Number of encrypted dumps to retain. Default 14.
 .PARAMETER Passphrase
   SecureString used for GPG symmetric encryption. Prompted if omitted.
+.PARAMETER PassphraseFile
+  Path to a DPAPI-encrypted SecureString blob (written by
+  scripts/backup-schedule.ps1). Used when the task cannot prompt. Takes
+  precedence over prompting but -Passphrase wins if both are given.
 #>
 
 [CmdletBinding()]
@@ -23,11 +30,19 @@ param(
     [string]$OutDir = (Join-Path (Split-Path $PSScriptRoot -Parent) "backups"),
     [string]$DatabaseUrl = $env:VEILDROP_DATABASE_URL,
     [int]$Keep = 14,
-    [System.Security.SecureString]$Passphrase
+    [System.Security.SecureString]$Passphrase,
+    [string]$PassphraseFile
 )
 
 $ErrorActionPreference = "Stop"
 
+if (-not $Passphrase -and $PassphraseFile) {
+    if (-not (Test-Path -LiteralPath $PassphraseFile)) {
+        throw "PassphraseFile not found: $PassphraseFile"
+    }
+    $Passphrase = Get-Content -LiteralPath $PassphraseFile -Raw | ConvertTo-SecureString
+    Write-Verbose "[backup] passphrase loaded from $PassphraseFile"
+}
 if (-not $Passphrase) {
     $Passphrase = Read-Host "Backup passphrase" -AsSecureString
 }

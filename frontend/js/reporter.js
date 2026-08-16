@@ -129,10 +129,10 @@ window.VeilReporter = (() => {
               <img class="brand-logo" src="img/logo.png" alt="VeilDrop logo" width="44" height="44" />
               <span class="brand-name">VeilDrop</span>
             </a>
-            <div class="nav-actions">
+            <nav class="nav-actions" aria-label="Primary">
               <button class="btn-icon" data-theme-toggle aria-label="Switch theme">${U.themeIcon(window.VeilTheme ? window.VeilTheme.current() : "light")}</button>
               <a class="btn btn-ghost" href="#/">Cancel</a>
-            </div>
+            </nav>
           </div>
         </header>
         <main class="site-main">
@@ -549,9 +549,10 @@ window.VeilReporter = (() => {
               <img class="brand-logo" src="img/logo.png" alt="VeilDrop logo" width="44" height="44" />
               <span class="brand-name">VeilDrop</span>
             </a>
-            <div class="nav-actions">
+            <nav class="nav-actions" aria-label="Primary">
               <button class="btn-icon" data-theme-toggle aria-label="Switch theme">${U.themeIcon(window.VeilTheme ? window.VeilTheme.current() : "light")}</button>
-            </div>
+              <a class="btn btn-ghost" href="#/">Back to home</a>
+            </nav>
           </div>
         </header>
         <main class="site-main">
@@ -667,10 +668,10 @@ window.VeilReporter = (() => {
               <img class="brand-logo" src="img/logo.png" alt="VeilDrop logo" width="44" height="44" />
               <span class="brand-name">VeilDrop</span>
             </a>
-            <div class="nav-actions">
+            <nav class="nav-actions" aria-label="Primary">
               <button class="btn-icon" data-theme-toggle aria-label="Switch theme">${U.themeIcon(window.VeilTheme ? window.VeilTheme.current() : "light")}</button>
               <a class="btn btn-ghost" href="#/">Back to home</a>
-            </div>
+            </nav>
           </div>
         </header>
         <main class="site-main">
@@ -791,10 +792,10 @@ window.VeilReporter = (() => {
               <img class="brand-logo" src="img/logo.png" alt="VeilDrop logo" width="44" height="44" />
               <span class="brand-name">VeilDrop</span>
             </a>
-            <div class="nav-actions">
+            <nav class="nav-actions" aria-label="Primary">
               <button class="btn-icon" data-theme-toggle aria-label="Switch theme">${U.themeIcon(window.VeilTheme ? window.VeilTheme.current() : "light")}</button>
               <a class="btn btn-ghost" href="#/access">Switch case</a>
-            </div>
+            </nav>
           </div>
         </header>
         <main class="site-main">

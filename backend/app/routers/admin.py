@@ -52,6 +52,28 @@ class RegisterKeyRequest(BaseModel):
     algorithm: str
 
 
+@router.get("/cases")
+async def list_all_cases(session: SeniorDep):
+    cases = await case_svc.list_all_cases(investigator_id=session["investigator_id"])
+    return {
+        "cases": [
+            {
+                "case_id": c["case_id"],
+                "status": c["status"],
+                "created_at": c["created_at"].isoformat() if c["created_at"] else None,
+                "expires_at": c["expires_at"].isoformat() if c["expires_at"] else None,
+                "reporter_meta": c["reporter_meta"],
+                "crypto_version": c["crypto_version"],
+                "permission": c.get("permission"),
+                "assigned_at": c["assigned_at"].isoformat() if c.get("assigned_at") else None,
+                "is_assigned": c.get("is_assigned", False),
+                "assignment_count": c.get("assignment_count", 0),
+            }
+            for c in cases
+        ]
+    }
+
+
 @router.post("/investigators")
 async def create_investigator(req: CreateInvestigatorRequest, session: AdminDep):
     if req.role not in ROLES:
@@ -83,6 +105,25 @@ async def assign_case(req: AssignCaseRequest, session: SeniorDep):
         result = await case_svc.assign_case(req.case_id, req.investigator_id, req.permission)
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
+
+    reporter_env = await env_svc.get_for_recipient(req.case_id, f"reporter-{req.case_id}")
+    if reporter_env:
+        existing = await env_svc.get_for_recipient(req.case_id, req.investigator_id)
+        if not existing:
+            await env_svc.create_investigator_envelope(
+                req.case_id,
+                req.investigator_id,
+                bytes(reporter_env["wrapped_dek"]),
+                reporter_env["algorithm"],
+            )
+            await audit(
+                "envelope_assigned",
+                severity="info",
+                case_id=req.case_id,
+                investigator_id=req.investigator_id,
+                details={"source": "auto_copy_from_reporter"},
+            )
+
     return result
 
 

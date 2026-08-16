@@ -67,13 +67,19 @@ app = FastAPI(
 )
 
 s = get_settings()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=s.cors_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Correlation-ID"],
-)
+# Only mount CORS when cross-origin access is actually configured. With no
+# origins the middleware would still answer preflights, advertising the API to
+# origins that are not allowed anything.
+if s.cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=s.cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Correlation-ID"],
+    )
+else:
+    logger.info("CORS disabled (VEILDROP_CORS_ORIGINS empty); same-origin only")
 app.add_middleware(RequestLogMiddleware)
 app.add_middleware(CorrelationMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)

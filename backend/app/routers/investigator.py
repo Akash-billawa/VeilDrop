@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Form, Header, HTTPException
 from pydantic import BaseModel
 
 from ..config import get_settings
@@ -240,12 +240,12 @@ async def download_evidence(
 async def send_message(
     session: SessionDep,
     case_id: str,
-    ciphertext: str,
-    nonce: str,
-    tag: str,
-    aad: str = "",
-    crypto_version: int = 1,
-    burn_after_read: bool = False,
+    ciphertext: str = Form(...),
+    nonce: str = Form(...),
+    tag: str = Form(...),
+    aad: str = Form(""),
+    crypto_version: int = Form(1),
+    burn_after_read: bool = Form(False),
 ):
     perm = await case_svc.check_access(case_id, session["investigator_id"])
     if not perm:
