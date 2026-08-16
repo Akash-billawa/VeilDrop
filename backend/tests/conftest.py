@@ -17,11 +17,18 @@ async def _init_schema():
     """Ensure the database schema exists before any test runs.
 
     Lets the suite run against a fresh/empty PostgreSQL (CI service or a new
-    local install) without a manual `init_db` step, and keeps it idempotent.
+    local install) without a manual ``init_db`` step, and keeps it idempotent.
+    Skips gracefully when the database is unreachable (e.g. replication tests
+    that only use ``VEILDROP_REPL_PRIMARY_URL``/``STANDBY_URL``).
     """
     from app.database import close_pool, create_pool, init_db
 
-    pool = await create_pool()
+    try:
+        pool = await create_pool()
+    except Exception:
+        pytest.skip("Primary database not reachable")
+        return  # unreachable, keeps type-checkers happy
+
     try:
         await init_db(pool)
     finally:
