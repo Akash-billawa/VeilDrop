@@ -55,7 +55,11 @@ echo "max_replication_slots = 4" >> "$PRIMARY_DIR/postgresql.conf"
 echo "listen_addresses = '127.0.0.1'" >> "$PRIMARY_DIR/postgresql.conf"
 
 echo "[repl] start primary"
-run_as_postgres "$PG_BIN/pg_ctl" -D "$PRIMARY_DIR" -l "$BASE/primary.log" start >/dev/null
+if ! run_as_postgres "$PG_BIN/pg_ctl" -D "$PRIMARY_DIR" -l "$BASE/primary.log" start; then
+  echo "[repl] ERROR: primary failed to start" >&2
+  cat "$BASE/primary.log" >&2 || true
+  exit 1
+fi
 sleep 1
 run_as_postgres "$PG_BIN/createdb" -h 127.0.0.1 -p "$PRIMARY_PORT" -U postgres veildrop
 
@@ -67,7 +71,11 @@ echo "port = $STANDBY_PORT" >> "$STANDBY_DIR/postgresql.conf"
 echo "listen_addresses = '127.0.0.1'" >> "$STANDBY_DIR/postgresql.conf"
 
 echo "[repl] start standby"
-run_as_postgres "$PG_BIN/pg_ctl" -D "$STANDBY_DIR" -l "$BASE/standby.log" start >/dev/null
+if ! run_as_postgres "$PG_BIN/pg_ctl" -D "$STANDBY_DIR" -l "$BASE/standby.log" start; then
+  echo "[repl] ERROR: standby failed to start" >&2
+  cat "$BASE/standby.log" >&2 || true
+  exit 1
+fi
 
 echo "[repl] waiting for streaming state..."
 for _ in $(seq 1 60); do
