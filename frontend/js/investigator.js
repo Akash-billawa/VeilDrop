@@ -4,6 +4,7 @@
    are shown as honest "not available in this console" states. */
 window.VeilInvestigator = (() => {
   const U = window.VeilUI;
+  const C = window.VeilCrypto;
 
   /* ---------- Live vault API + session state ---------- */
   const API = "";
