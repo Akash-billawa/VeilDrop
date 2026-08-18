@@ -248,9 +248,9 @@ async def send_message(
     burn_after_read: bool = Form(False),
 ):
     perm = await case_svc.check_access(case_id, session["investigator_id"])
-    if not perm:
+    if not perm and session["role"] != "security_admin":
         raise HTTPException(status_code=403, detail="Case not assigned")
-    if perm not in ("write", "admin"):
+    if perm and perm not in ("write", "admin"):
         raise HTTPException(status_code=403, detail="Read-only access on this case")
 
     case = await case_svc.get_case(case_id)
@@ -285,7 +285,7 @@ async def consume_burn(
     session: SessionDep,
 ):
     perm = await case_svc.check_access(case_id, session["investigator_id"])
-    if not perm:
+    if not perm and session["role"] != "security_admin":
         raise HTTPException(status_code=403, detail="Case not assigned")
 
     result = await msg_svc.consume_burn(message_id)

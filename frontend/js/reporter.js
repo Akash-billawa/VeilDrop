@@ -984,6 +984,21 @@ window.VeilReporter = (() => {
     return `<span class="badge badge-warning"><span class="dot"></span> Burn-on-read</span>`;
   }
 
+  function formatReportBody(text) {
+    try {
+      const obj = JSON.parse(text);
+      if (obj && typeof obj === "object" && (obj.category || obj.title)) {
+        const fields = [];
+        if (obj.category) fields.push(`<div class="report-field"><span class="report-label">Category</span><span>${U.esc(obj.category)}</span></div>`);
+        if (obj.title) fields.push(`<div class="report-field"><span class="report-label">Title</span><span>${U.esc(obj.title)}</span></div>`);
+        if (obj.summary) fields.push(`<div class="report-field"><span class="report-label">Summary</span><span>${U.esc(obj.summary)}</span></div>`);
+        if (obj.details) fields.push(`<div class="report-field"><span class="report-label">Details</span><span>${U.esc(obj.details)}</span></div>`);
+        if (fields.length) return `<div class="report-body">${fields.join("")}</div>`;
+      }
+    } catch {}
+    return U.esc(text);
+  }
+
   function sealedMsgCard(m) {
     if (m._plaintext && !(m.burn_after_read && m.sender_type === "investigator" && !m.consumed_at)) {
       return `
@@ -994,7 +1009,7 @@ window.VeilReporter = (() => {
             <span>${U.timeAgo(m.created_at)}</span>
             ${m.burn_after_read ? '<span class="badge badge-danger"><span class="dot"></span> Burn-on-read</span>' : ""}
           </div>
-          <div class="msg-bubble">${U.esc(m._plaintext)}</div>
+          <div class="msg-bubble">${formatReportBody(m._plaintext)}</div>
           <div class="file-info" style="margin-top:var(--sp-1);align-self:flex-end"><span class="mono">decrypted locally · AES-256-GCM v1</span></div>
         </div>`;
     }
@@ -1081,12 +1096,12 @@ window.VeilReporter = (() => {
       if (!msg) return;
       const doReveal = async () => {
         const plaintext = msg._plaintext || DEMO_PLAINTEXTS[id] || "(preview — plaintext unavailable)";
-        msg.consumed_at = new Date().toISOString();
         if (data._dek) {
           try {
             await apiFetch(`/api/v1/reporter/cases/${encodeURIComponent(caseId)}/messages/${encodeURIComponent(id)}/consume`, { method: "POST" });
           } catch (_) { /* best-effort; sealed locally regardless */ }
         }
+        msg.consumed_at = new Date().toISOString();
         const card = btn.closest("[data-burn]");
         card.outerHTML = `
           <div class="msg investigator">

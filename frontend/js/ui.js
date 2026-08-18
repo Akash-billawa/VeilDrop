@@ -94,6 +94,7 @@ window.VeilUI = (() => {
       setTimeout(() => { overlay.remove(); if (focus) focus.focus(); }, 200);
     };
     overlay.addEventListener("click", (e) => { if (e.target === overlay) close(document.activeElement); });
+    overlay.addEventListener("click", (e) => { if (e.target.closest("[data-dlg-close]")) close(document.activeElement); });
     overlay.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); close(document.activeElement); } });
     modals.push(close);
     return { overlay, close };

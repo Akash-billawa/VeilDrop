@@ -302,11 +302,13 @@
 .progress-sub { font-size: var(--fs-xs); color: var(--text-muted); }
 
 /* ---- Credential card ---- */
-.credential-card { background: var(--surface-2); border: var(--border-width) solid var(--border-strong); border-radius: var(--r-lg); padding: var(--sp-6); }
+.credential-card { background: var(--surface-2); border: var(--border-width) solid var(--border-strong); border-radius: var(--r-lg); padding: var(--sp-6); overflow: hidden; }
 .credential-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); padding: var(--sp-4) 0; border-bottom: var(--border-width) solid var(--border); }
 .credential-row:last-child { border-bottom: none; }
+.credential-row > div { min-width: 0; overflow: hidden; }
 .credential-label { font-size: var(--fs-xs); font-weight: var(--fw-semibold); letter-spacing: var(--ls-wide); color: var(--text-muted); text-transform: uppercase; margin-bottom: var(--sp-1); }
-.credential-value { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: var(--fw-medium); letter-spacing: 0.04em; }
+.credential-value { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: var(--fw-medium); letter-spacing: 0.04em; overflow-x: auto; white-space: nowrap; }
+.credential-warn { font-size: var(--fs-sm); color: var(--text-muted); margin-top: var(--sp-4); }
 
 /* ---- Security badges ---- */
 .sec-badge { display: inline-flex; align-items: center; gap: var(--sp-2); padding: 4px 12px; border-radius: var(--r-sm); font-size: var(--fs-xs); font-weight: var(--fw-medium); border: var(--border-width) solid var(--border-strong); background: var(--surface); color: var(--text-secondary); }
@@ -316,16 +318,25 @@
 .thread { display: flex; flex-direction: column; gap: var(--sp-5); }
 .sealed-card { display: flex; align-items: flex-start; gap: var(--sp-4); padding: var(--sp-5); border: var(--border-width) solid var(--border); border-radius: var(--r-lg); background: var(--surface); }
 .sealed-card .file-icon { color: var(--text-muted); }
-.msg { display: flex; flex-direction: column; max-width: min(620px, 88%); }
+/* ---- Messages ---- */
+/* ---- Messages ---- */
+.msg { display: flex; flex-direction: column; max-width: min(900px, 85%); }
 .msg-meta { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); font-size: var(--fs-xs); color: var(--text-muted); }
 .msg-name { font-weight: var(--fw-medium); color: var(--text-secondary); }
 .msg-bubble { padding: var(--sp-4) var(--sp-5); border-radius: var(--r-lg); font-size: var(--fs-md); line-height: var(--lh-normal); white-space: pre-wrap; }
-.msg-reporter .msg-bubble { background: var(--surface-2); border: var(--border-width) solid var(--border); border-bottom-left-radius: var(--r-sm); }
-.msg-investigator .msg-bubble { background: var(--accent-subtle); border: var(--border-width) solid var(--accent-soft); border-bottom-right-radius: var(--r-sm); color: var(--text); }
+.msg.reporter .msg-bubble { background: var(--surface-2); border: var(--border-width) solid var(--border); border-bottom-left-radius: var(--r-sm); }
+.msg.investigator .msg-bubble { background: var(--accent-subtle); border: var(--border-width) solid var(--accent-soft); border-bottom-right-radius: var(--r-sm); color: var(--text); }
+.msg-internal { align-self: flex-start; }
 .msg-internal .msg-bubble { background: var(--warning-subtle); border: var(--border-width) solid var(--warning); border-bottom-left-radius: var(--r-sm); color: var(--warning); font-size: var(--fs-sm); }
 .msg.investigator { align-self: flex-end; }
 .msg.investigator .msg-meta { align-self: flex-end; }
-.msg-internal { align-self: flex-start; }
+
+/* ---- Report body in messages ---- */
+.report-body { display: flex; flex-direction: column; gap: var(--sp-3); }
+.report-field { display: flex; flex-direction: column; gap: 2px; }
+.report-field:last-child { margin-top: var(--sp-1); }
+.report-label { font-size: 10px; font-weight: var(--fw-semibold); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
+.report-field > span:last-child { font-size: var(--fs-sm); color: var(--text-primary); }
 
 .composer { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4); border: var(--border-width) solid var(--border-strong); border-radius: var(--r-lg); background: var(--surface); }
 .composer textarea { border: none; background: none; padding: 0; min-height: 64px; resize: none; }
@@ -485,7 +496,7 @@
 .char-count.near { color: var(--warning); }
 
 /* ---- Obscured credential ---- */
-.secret-value { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: var(--fw-medium); letter-spacing: 0.04em; }
+.secret-value { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: var(--fw-medium); letter-spacing: 0.04em; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; max-width: 100%; }
 .secret-value.revealed { letter-spacing: 0.02em; }
 .secret-actions { display: flex; gap: var(--sp-2); }
 

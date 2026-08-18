@@ -729,9 +729,11 @@ window.VeilInvestigator = (() => {
           const pt = await C.decryptObject(dek, parsed.purpose, parsed.objectId, C.hexToBytes(msg.ciphertext), C.hexToBytes(msg.nonce), C.hexToBytes(msg.tag), parsed.version);
           msg._plaintext = C.toUtf8(pt);
           msg.consumed_at = new Date().toISOString();
-          await apiFetch(`/api/v1/investigator/cases/${encodeURIComponent(data.case_id)}/messages/${id}/consume`, { method: "POST" });
           renderMessages();
-          U.toast("Burn-on-read message decrypted.", "success");
+          U.toast("Burn-on-read message decrypted. It is now unreadable.", "warning");
+          try {
+            await apiFetch(`/api/v1/investigator/cases/${encodeURIComponent(data.case_id)}/messages/${id}/consume`, { method: "POST" });
+          } catch (_) { /* best-effort; already displayed locally */ }
         } catch (e) { U.toast("Failed to decrypt burn message.", "error"); }
       }));
     }
@@ -771,7 +773,10 @@ window.VeilInvestigator = (() => {
             <label for="inv-msg" class="sr-only">Message</label>
             <textarea class="input" id="inv-msg" rows="2" placeholder="Type a message to the reporter…" disabled></textarea>
           </div>
-          <button class="btn btn-primary" id="inv-send" disabled>${U.icon("edit")} Send</button>
+          <div style="display:flex;gap:var(--sp-2)">
+            <button class="btn btn-secondary" id="inv-burn" title="Send as burn-on-read" disabled>${U.icon("flame")} Burn</button>
+            <button class="btn btn-primary" id="inv-send" disabled>${U.icon("edit")} Send</button>
+          </div>
         </div>` : ""}
       </div>`;
 
@@ -802,6 +807,8 @@ window.VeilInvestigator = (() => {
           }
           renderMessages();
           if (msgInput) { msgInput.disabled = false; sendBtn.disabled = false; }
+          const burnBtn = ws.querySelector("#inv-burn");
+          if (burnBtn) burnBtn.disabled = false;
           U.toast("Conversation decrypted.", "success");
         } catch (_) {
           U.toast("Wrong recovery secret — could not unwrap the data key.", "error");
@@ -809,11 +816,13 @@ window.VeilInvestigator = (() => {
       });
 
       if (sendBtn) {
-        sendBtn.addEventListener("click", async () => {
+        const finishSend = async (burn) => {
           if (!dek) { U.toast("Unlock the conversation first.", "error"); return; }
           const text = (msgInput.value || "").trim();
           if (!text) return;
           sendBtn.disabled = true;
+          const burnBtn = ws.querySelector("#inv-burn");
+          if (burnBtn) burnBtn.disabled = true;
           try {
             const objectId = crypto.randomUUID();
             const enc = await C.encryptObject(dek, "message", objectId, C.toBytes(text));
@@ -823,6 +832,7 @@ window.VeilInvestigator = (() => {
             fd.append("tag", C.bytesToHex(enc.tag));
             fd.append("aad", C.bytesToHex(enc.aad));
             fd.append("crypto_version", String(enc.version || 1));
+            fd.append("burn_after_read", String(burn));
             const result = await apiFetch(`/api/v1/investigator/cases/${encodeURIComponent(data.case_id)}/messages`, { method: "POST", body: fd });
             messages.push({
               message_id: result.message_id,
@@ -832,17 +842,53 @@ window.VeilInvestigator = (() => {
               tag: C.bytesToHex(enc.tag),
               aad: C.bytesToHex(enc.aad),
               crypto_version: enc.version || 1,
-              burn_after_read: false,
+              burn_after_read: burn,
               consumed_at: null,
               created_at: result.created_at,
               _plaintext: text,
             });
             renderMessages();
             msgInput.value = "";
-            U.toast("Message sent.", "success");
+            if (burn) {
+              U.openDialog(`
+                <div class="dialog-header"><h2>Sent as burn-on-read</h2><button class="btn-icon" data-dlg-close aria-label="Close">${U.icon("x")}</button></div>
+                <div class="dialog-body"><p>Your message is sealed and will burn after a single read. It can no longer be recalled.</p></div>
+                <div class="dialog-footer"><button class="btn btn-primary" data-dlg-close>Done</button></div>`);
+            }
+            U.toast(burn ? "Sent as burn-on-read." : "Message sent.", "success");
           } catch (e) {
             U.toast(e.detail || "Failed to send message.", "error");
-          } finally { sendBtn.disabled = false; }
+          } finally {
+            sendBtn.disabled = false;
+            const burnBtn = ws.querySelector("#inv-burn");
+            if (burnBtn) burnBtn.disabled = false;
+          }
+        };
+
+        sendBtn.addEventListener("click", () => finishSend(false));
+
+        const burnBtn = ws.querySelector("#inv-burn");
+        if (burnBtn) {
+          burnBtn.addEventListener("click", () => {
+            if (!dek) { U.toast("Unlock the conversation first.", "error"); return; }
+            const text = (msgInput.value || "").trim();
+            if (!text) { U.toast("Write a message first.", "error"); return; }
+            const { overlay, close } = U.openDialog(`
+              <div class="dialog-header"><h2>Send burn-on-read?</h2><button class="btn-icon" data-dlg-close aria-label="Close">${U.icon("x")}</button></div>
+              <div class="dialog-body">
+                <p>This message becomes unreadable immediately after the reporter opens it once. It cannot be retrieved afterwards.</p>
+              </div>
+              <div class="dialog-footer">
+                <button class="btn btn-ghost" data-dlg-close>Cancel</button>
+                <button class="btn btn-danger" data-confirm-burn>${U.icon("flame")} Confirm burn-on-read</button>
+              </div>`);
+            overlay.querySelector("[data-confirm-burn]").addEventListener("click", () => { close(); finishSend(true); });
+            overlay.querySelectorAll("[data-dlg-close]").forEach((b) => b.addEventListener("click", () => close()));
+          });
+        }
+
+        msgInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); finishSend(false); }
         });
       }
     }
