@@ -163,6 +163,8 @@ async def get_case(case_id: str, session: SessionDep):
         raise HTTPException(status_code=404, detail="Case not found")
 
     envelope = await env_svc.get_for_recipient(case_id, session["investigator_id"])
+    if not envelope and session["role"] == "security_admin":
+        envelope = await env_svc.get_for_recipient(case_id, f"reporter-{case_id}")
     messages = await msg_svc.list_for_case(case_id)
     evidence = await ev_svc.list_for_case(case_id)
 
